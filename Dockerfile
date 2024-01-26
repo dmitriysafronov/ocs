@@ -24,7 +24,7 @@ RUN set -x \
 
 #############################################################
 
-FROM base AS builder-dependencies
+FROM base AS builder-sources
 
 RUN set -x \
 		&& apt-get update && apt-get install -y \
@@ -42,7 +42,7 @@ RUN set -x \
 
 #############################################################
 
-FROM base AS builder
+FROM base AS builder-dependencies
 
 RUN set -x \
 		&& apt-get update && apt-get install -y \
@@ -85,7 +85,11 @@ RUN set -x \
 			universal-ctags \
 		&& rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder-dependencies /usr/src/ocserv/ /usr/src/ocserv/
+#############################################################
+
+FROM builder-dependencies AS builder
+
+COPY --from=builder-sources /usr/src/ocserv/ /usr/src/ocserv/
 
 RUN set -x \
 		&& cd /usr/src/ocserv \
@@ -93,9 +97,18 @@ RUN set -x \
 		&& ./configure --enable-oidc-auth \
 		&& make \
 		&& make install \
-		&& cp /usr/src/ocserv/doc/sample.config /tmp/ocserv.conf.template \
+		&& mkdir -p /usr/local/share/ocserv \
+		&& cp /usr/src/ocserv/doc/sample.config /usr/local/share/ocserv/sample.config \
 		&& cd / \
-		&& rm -rf /usr/src/ocserv \
+		&& rm -rf /usr/src/ocserv
+
+#############################################################
+
+FROM base AS config
+
+COPY --from=builder /usr/local/share/ocserv/sample.config /tmp/ocserv.conf.template
+
+RUN set -x \
 		&& sed -i 's/\.\/sample\.passwd/\/etc\/ocserv\/ocpasswd/'																			/tmp/ocserv.conf.template \
 		&& sed -i 's/\(max-same-clients = \)2/\110/' 																									/tmp/ocserv.conf.template \
 		&& sed -i 's/\.\.\/tests/\/etc\/ocserv/'																											/tmp/ocserv.conf.template \
@@ -131,11 +144,11 @@ RUN set -x \
 		&& rm -rf /var/lib/apt/lists/* \
 		&& rm -rf /usr/local/*
 
-COPY --from=builder /usr/local/ /usr/local/
-
 COPY docker-entrypoint.sh /entrypoint.sh
 RUN set -x \
 		&& chmod a+x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 
 ############################################################
 
@@ -143,8 +156,10 @@ FROM runtime-dependencies AS runtime
 
 WORKDIR /etc/ocserv
 
-ENTRYPOINT ["/entrypoint.sh"]
+COPY --from=builder /usr/local/ /usr/local/
 
-EXPOSE 443
+COPY --from=config /usr/local/share/ocserv/ocserv.conf.envsubst /usr/local/share/ocserv/ocserv.conf.envsubst
 
 CMD ["ocserv", "-c", "/etc/ocserv/ocserv.conf", "-f"]
+
+EXPOSE 443
