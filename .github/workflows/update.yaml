@@ -46,7 +46,7 @@ jobs:
 
       - name: Save latest Ubuntu docker tag to file in repo
         run: |
-          echo "${{ steps.docker-tag.outputs.tag }}" > .docker-tag
+          echo "${{ steps.docker-tag.outputs.tag }}" | cut -s -d '-' -f 2 > .docker-tag
 
       - name: Commit all changed files back to the repository
         uses: stefanzweifel/git-auto-commit-action@v4
