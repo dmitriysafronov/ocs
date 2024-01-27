@@ -32,22 +32,22 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Read ubuntu codename from file
         run: |
           UBUNTU_CODENAME=$(cat .ubuntu-codename)
           echo "UBUNTU_CODENAME=$UBUNTU_CODENAME" >> $GITHUB_ENV
-
-      - name: Read git tag from file
-        run: |
-          OCS_VERSION=$(cat .ocs-version)
-          echo "OCS_VERSION=$OCS_VERSION" >> $GITHUB_ENV
     
-      - name: Read docker tag from file
+      - name: Read ubuntu version from file
         run: |
           UBUNTU_VERSION=$(cat .ubuntu-version)
           echo "UBUNTU_VERSION=$UBUNTU_VERSION" >> $GITHUB_ENV
+
+      - name: Read ocs version from file
+        run: |
+          OCS_VERSION=$(cat .ocs-version)
+          echo "OCS_VERSION=$OCS_VERSION" >> $GITHUB_ENV
 
       # Workaround: https://github.com/docker/build-push-action/issues/461
       - name: Setup Docker buildx

@@ -28,17 +28,6 @@ jobs:
           UBUNTU_CODENAME=$(cat .ubuntu-codename)
           echo "UBUNTU_CODENAME=$UBUNTU_CODENAME" >> $GITHUB_ENV
 
-      - name: Get latest OCS git tag
-        uses: dmitriysafronov/find-latest-tag@v1.0.0
-        id: ocs-version
-        with:
-          repo: https://gitlab.com/openconnect/ocserv.git
-          tag: '[0-9]{1,}.[0-9]{1,}.[0-9]{1,}'
-
-      - name: Save latest OCS git tag to file in repo
-        run: |
-          echo "${{ steps.ocs-version.outputs.tag }}" > .ocs-version
-
       - name: Install jq
         uses: dcarbone/install-jq-action@v2.1.0
 
@@ -52,6 +41,17 @@ jobs:
       - name: Save latest Ubuntu docker tag to file in repo
         run: |
           echo "${{ steps.ubuntu-version.outputs.tag }}" | cut -s -d '-' -f 2 > .ubuntu-version
+
+      - name: Get latest OCS git tag
+        uses: dmitriysafronov/find-latest-tag@v1.0.0
+        id: ocs-version
+        with:
+          repo: https://gitlab.com/openconnect/ocserv.git
+          tag: '[0-9]{1,}.[0-9]{1,}.[0-9]{1,}'
+
+      - name: Save latest OCS git tag to file in repo
+        run: |
+          echo "${{ steps.ocs-version.outputs.tag }}" > .ocs-version
 
       - name: Commit all changed files back to the repository
         uses: stefanzweifel/git-auto-commit-action@v4
