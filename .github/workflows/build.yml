@@ -1,4 +1,4 @@
-name: Docker
+name: Build
 
 # This workflow uses actions that are not certified by GitHub.
 # They are provided by a third-party and are governed by
@@ -8,8 +8,6 @@ name: Docker
 on:
   push:
     branches: [ "main" ]
-    # Publish semver tags as releases.
-    tags: [ '*.*.*-**' ]
   pull_request:
     branches: [ "main" ]
 
@@ -21,9 +19,10 @@ env:
 
 
 jobs:
-  build:
 
+  build:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
@@ -35,14 +34,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Read git tag from file
+        uses: jaywcjlove/github-action-read-file@main
+        with:
+          path: .git-tag
+        id: git-tag
+
+      - name: Read docker tag from file
+        uses: jaywcjlove/github-action-read-file@main
+        with:
+          path: .docker-tag
+        id: docker-tag
+
       # Workaround: https://github.com/docker/build-push-action/issues/461
       - name: Setup Docker buildx
+        if: ${{ steps.git-tag.outputs.content != '' && steps.docker-tag.outputs.content != '' }}
         uses: docker/setup-buildx-action@v2
 
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
+        if: ${{ github.event_name != 'pull_request' && steps.git-tag.outputs.content != '' && steps.docker-tag.outputs.content != '' }}
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
@@ -52,22 +64,21 @@ jobs:
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
-        id: meta
+        if: ${{ steps.git-tag.outputs.content != '' && steps.docker-tag.outputs.content != '' }}
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}.{{patch}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=ref,event=branch,prefix=,suffix=-{{date 'x'}}-{{sha}}
+            type=raw,enable={{is_default_branch}},value=latest
+            type=raw,enable={{is_default_branch}},value=${{ steps.git-tag.outputs.content }}-${{ steps.docker-tag.outputs.content }}
+            type=raw,enable={{is_default_branch}},value=${{ steps.git-tag.outputs.content }}-${{ steps.docker-tag.outputs.content }},suffix=-{{date 'x'}}
+        id: meta
 
       # Cache dependencies
       # https://github.com/actions/cache
       - name: Cache Docker layers
+        if: ${{ steps.git-tag.outputs.content != '' && steps.docker-tag.outputs.content != '' }}
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
@@ -78,7 +89,7 @@ jobs:
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
-        id: build-and-push
+        if: ${{ steps.git-tag.outputs.content != '' && steps.docker-tag.outputs.content != '' }}
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -90,11 +101,16 @@ jobs:
           # More: https://github.com/moby/buildkit#--export-cache-options
           # And: https://github.com/docker/buildx#--cache-tonametypetypekeyvalue
           cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
+          build-args: |
+            OC_VERSION=${{ steps.git-tag.outputs.content }}
+            UBUNTU_VERSION=${{ steps.docker-tag.outputs.content }}
+        id: build-and-push
 
       # Temp fix / Disabled on self-hosted runner
       # https://github.com/docker/build-push-action/issues/252
       # https://github.com/moby/buildkit/issues/1896
       - name: Move cache
+        if: ${{ steps.git-tag.outputs.content != '' && steps.docker-tag.outputs.content != '' }}
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
@@ -103,7 +119,7 @@ jobs:
       # # Install the cosign tool except on PR
       # # https://github.com/sigstore/cosign-installer
       # - name: Install cosign
-      #   if: github.event_name != 'pull_request'
+      #   if: ${{ github.event_name != 'pull_request' && steps.git-tag.outputs.content != '' && steps.docker-tag.outputs.content != '' }}
       #   uses: sigstore/cosign-installer@v3.3.0
       #   with:
       #     cosign-release: 'v2.2.2'
@@ -114,7 +130,7 @@ jobs:
       # # transparency data even for private images, pass --force to cosign below.
       # # https://github.com/sigstore/cosign
       # - name: Sign the published Docker image
-      #   if: ${{ github.event_name != 'pull_request' }}
+      #   if: ${{ github.event_name != 'pull_request' && steps.git-tag.outputs.content != '' && steps.docker-tag.outputs.content != '' }}
       #   env:
       #     COSIGN_EXPERIMENTAL: "true"
       #   # This step uses the identity token to provision an ephemeral certificate
