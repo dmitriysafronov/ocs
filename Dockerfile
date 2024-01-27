@@ -164,3 +164,5 @@ COPY --from=config /usr/local/share/ocserv/ocserv.conf.envsubst /usr/local/share
 CMD ["ocserv", "-c", "/etc/ocserv/ocserv.conf", "-f"]
 
 EXPOSE 443
+
+LABEL org.opencontainers.image.description "OpenConnect server automated build"
