@@ -40,7 +40,9 @@ jobs:
 
       - name: Save latest Ubuntu docker tag to file in repo
         run: |
-          echo "${{ steps.ubuntu-version.outputs.tag }}" | cut -s -d '-' -f 2 > .ubuntu-version
+          UBUNTU_VERSION=$(${{ steps.ubuntu-version.outputs.tag }}" | cut -s -d '-' -f 2)
+          echo "$UBUNTU_VERSION" > .ubuntu-version
+          echo "UBUNTU_VERSION=$UBUNTU_VERSION" >> $GITHUB_ENV
 
       - name: Get latest OCS git tag
         uses: dmitriysafronov/find-latest-tag@v1.0.0
@@ -56,5 +58,5 @@ jobs:
       - name: Commit all changed files back to the repository
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Automated Update. Git: ${{ steps.ocs-version.outputs.tag }}, Docker: ${{ steps.ubuntu-version.outputs.tag }} (${{ env.UBUNTU_CODENAME }})"
+          commit_message: "Automated Update. Git: ${{ steps.ocs-version.outputs.tag }}, Docker: ${{ env.UBUNTU_VERSION }} (${{ env.UBUNTU_CODENAME }})"
           file_pattern: '.ocs-version .ubuntu-version'
