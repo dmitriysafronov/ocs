@@ -30,31 +30,31 @@ jobs:
 
       - name: Get latest OCS git tag
         uses: dmitriysafronov/find-latest-tag@v1.0.0
-        id: git-tag
+        id: ocs-version
         with:
           repo: https://gitlab.com/openconnect/ocserv.git
           tag: '[0-9]{1,}.[0-9]{1,}.[0-9]{1,}'
 
       - name: Save latest OCS git tag to file in repo
         run: |
-          echo "${{ steps.git-tag.outputs.tag }}" > .git-tag
+          echo "${{ steps.ocs-version.outputs.tag }}" > .ocs-version
 
       - name: Install jq
         uses: dcarbone/install-jq-action@v2.1.0
 
       - name: Get latest Ubuntu docker tag
         uses: ./.github/actions/get-latest-docker-tag
-        id: docker-tag
+        id: ubuntu-version
         with:
           image: library/ubuntu
           tag: '^${{ env.UBUNTU_CODENAME }}-(.+)$'
 
       - name: Save latest Ubuntu docker tag to file in repo
         run: |
-          echo "${{ steps.docker-tag.outputs.tag }}" | cut -s -d '-' -f 2 > .docker-tag
+          echo "${{ steps.ubuntu-version.outputs.tag }}" | cut -s -d '-' -f 2 > .ubuntu-version
 
       - name: Commit all changed files back to the repository
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Automated Update. Git: ${{ steps.git-tag.outputs.tag }}, Docker: ${{ steps.docker-tag.outputs.tag }} (${{ env.UBUNTU_CODENAME }})"
-          file_pattern: '.git-tag .docker-tag'
+          commit_message: "Automated Update. Git: ${{ steps.ocs-version.outputs.tag }}, Docker: ${{ steps.ubuntu-version.outputs.tag }} (${{ env.UBUNTU_CODENAME }})"
+          file_pattern: '.ocs-version .ubuntu-version'
