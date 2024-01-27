@@ -1,6 +1,7 @@
-ARG UBUNTU_VERSION=jammy-20240111
+ARG UBUNTU_CODENAME=jammy
+ARG UBUNTU_VERSION=20240111
 
-FROM ubuntu:${UBUNTU_VERSION} AS base
+FROM ubuntu:${UBUNTU_CODENAME}-${UBUNTU_VERSION} AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -31,11 +32,11 @@ RUN set -x \
 			curl \
 		&& rm -rf /var/lib/apt/lists/*
 
-ARG OC_VERSION=1.2.4
+ARG OCS_VERSION=1.2.4
 
 RUN set -x \
 		&& cd /tmp \
-		&& curl -SL --connect-timeout 8 --max-time 120 --retry 128 --retry-delay 5 "https://gitlab.com/openconnect/ocserv/-/archive/$OC_VERSION/ocserv-$OC_VERSION.tar.gz" -o ocserv.tar.gz \
+		&& curl -SL --connect-timeout 8 --max-time 120 --retry 128 --retry-delay 5 "https://gitlab.com/openconnect/ocserv/-/archive/$OCS_VERSION/ocserv-$OCS_VERSION.tar.gz" -o ocserv.tar.gz \
 		&& mkdir -p /usr/src/ocserv \
 		&& tar -xf ocserv.tar.gz -C /usr/src/ocserv --strip-components=1 \
 		&& rm -rf /tmp/*
