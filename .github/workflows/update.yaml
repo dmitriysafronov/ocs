@@ -1,0 +1,55 @@
+name: Update
+
+"on": 
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+
+  update:
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: write
+      checks: write
+      contents: write
+
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT }}
+
+      - name: Get latest OCS git tag
+        uses: dmitriysafronov/find-latest-tag@v1.0.0
+        id: git-tag
+        with:
+          repo: https://gitlab.com/openconnect/ocserv.git
+          tag: '[0-9]{1,}.[0-9]{1,}.[0-9]{1,}'
+
+      - name: Save latest OCS git tag to file in repo
+        run: |
+          echo "${{ steps.git-tag.outputs.tag }}" > .git-tag
+
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v2.1.0
+
+      - name: Get latest Ubuntu docker tag
+        uses: ./.github/actions/get-latest-docker-tag
+        id: docker-tag
+        with:
+          image: library/ubuntu
+          tag: '^jammy-(.+)$'
+
+      - name: Save latest Ubuntu docker tag to file in repo
+        run: |
+          echo "${{ steps.docker-tag.outputs.tag }}" > .docker-tag
+
+      - name: Commit all changed files back to the repository
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Automated Update. Git: ${{ steps.git-tag.outputs.tag }}, Docker: ${{ steps.docker-tag.outputs.tag }}"
+          file_pattern: '.git-tag .docker-tag'
