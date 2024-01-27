@@ -40,7 +40,7 @@ jobs:
 
       - name: Save latest Ubuntu docker tag to file in repo
         run: |
-          UBUNTU_VERSION=$(${{ steps.ubuntu-version.outputs.tag }}" | cut -s -d '-' -f 2)
+          UBUNTU_VERSION="$(echo ${{ steps.ubuntu-version.outputs.tag }} | cut -s -d '-' -f 2)""
           echo "$UBUNTU_VERSION" > .ubuntu-version
           echo "UBUNTU_VERSION=$UBUNTU_VERSION" >> $GITHUB_ENV
 
