@@ -87,5 +87,10 @@ export OCS_AUTH=${OCS_AUTH:-plain[passwd=/etc/ocserv/ocpasswd]}
 # Load config from ENV
 envsubst < /usr/local/share/ocserv/ocserv.conf.envsubst > /etc/ocserv/ocserv.conf
 
+# Add extra config if env var isn't empty
+if [ -n "$OCS_EXTRA" ] ; then
+	echo "${OCS_EXTRA}" >> /etc/ocserv/ocserv.conf
+fi
+
 # Run OpennConnect Server
 exec "$@"
