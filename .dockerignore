@@ -1,7 +1,3 @@
-.git/
-.github/
-.gitignore
-.ocs-version
-.ubuntu-codename
-.ubuntu-version
-README.md
+*
+
+!/docker-entrypoint.sh
