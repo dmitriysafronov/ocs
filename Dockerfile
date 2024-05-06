@@ -53,6 +53,7 @@ RUN set -x \
 			cscope \
 			curl \
 			gperf \
+			ipcalc \
 			libcjose-dev \
 			libcurl4-openssl-dev \
 			libev-dev \
