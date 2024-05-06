@@ -56,7 +56,7 @@ jobs:
           echo "${{ steps.ocs-version.outputs.tag }}" > .ocs-version
 
       - name: Commit all changed files back to the repository
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Automated Update. Git: ${{ steps.ocs-version.outputs.tag }}, Docker: ${{ env.UBUNTU_VERSION }} (${{ env.UBUNTU_CODENAME }})"
           file_pattern: '.ocs-version .ubuntu-version'
