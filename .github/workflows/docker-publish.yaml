@@ -34,19 +34,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Read ubuntu codename from file
-        run: |
-          UBUNTU_CODENAME=$(cat .ubuntu-codename)
-          echo "UBUNTU_CODENAME=$UBUNTU_CODENAME" >> $GITHUB_ENV
-    
-      - name: Read ubuntu version from file
-        run: |
-          UBUNTU_VERSION=$(cat .ubuntu-version)
-          echo "UBUNTU_VERSION=$UBUNTU_VERSION" >> $GITHUB_ENV
-
       - name: Read ocs version from file
         run: |
           OCS_VERSION=$(cat .ocs-version)
+          if [[ -z "${OCS_VERSION}" ]]; then
+            exit 1
+          fi
           echo "OCS_VERSION=$OCS_VERSION" >> $GITHUB_ENV
 
       - name: Write ocs major & major+minor version to ENV
@@ -55,17 +48,15 @@ jobs:
           echo "OCS_VERSION_MAJOR=$OCS_VERSION_MAJOR" >> $GITHUB_ENV
           OCS_VERSION_MINOR=$(echo $OCS_VERSION | cut -s -d '.' -f 2)
           echo "OCS_VERSION_MAJOR_MINOR=$OCS_VERSION_MAJOR.$OCS_VERSION_MINOR" >> $GITHUB_ENV
-  
 
       # Workaround: https://github.com/docker/build-push-action/issues/461
       - name: Setup Docker buildx
-        if: ${{ env.UBUNTU_CODENAME != '' && env.UBUNTU_VERSION != '' && env.OCS_VERSION != '' }}
         uses: docker/setup-buildx-action@v3
 
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
-        if: ${{ github.event_name != 'pull_request' && env.UBUNTU_CODENAME != '' && env.UBUNTU_VERSION != '' && env.OCS_VERSION != '' }}
+        if: ${{ github.event_name != 'pull_request' }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -75,7 +66,6 @@ jobs:
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
-        if: ${{ env.UBUNTU_CODENAME != '' && env.UBUNTU_VERSION != '' && env.OCS_VERSION != '' }}
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -84,15 +74,12 @@ jobs:
             type=raw,enable={{is_default_branch}},value=latest
             type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION_MAJOR }}
             type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION_MAJOR_MINOR }}
-            type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION }}
-            type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION }}-${{ env.UBUNTU_VERSION }}
-            type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION }}-${{ env.UBUNTU_VERSION }},suffix=-{{date 'x'}}
+            type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION }},suffix=-{{date 'x'}}
         id: meta
 
       # Cache dependencies
       # https://github.com/actions/cache
       - name: Cache Docker layers
-        if: ${{ env.UBUNTU_CODENAME != '' && env.UBUNTU_VERSION != '' && env.OCS_VERSION != '' }}
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
@@ -103,7 +90,6 @@ jobs:
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
-        if: ${{ env.UBUNTU_CODENAME != '' && env.UBUNTU_VERSION != '' && env.OCS_VERSION != '' }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -115,17 +101,12 @@ jobs:
           # More: https://github.com/moby/buildkit#--export-cache-options
           # And: https://github.com/docker/buildx#--cache-tonametypetypekeyvalue
           cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
-          build-args: |
-            OCS_VERSION=${{ env.OCS_VERSION }}
-            UBUNTU_VERSION=${{ env.UBUNTU_VERSION }}
-            UBUNTU_CODENAME=${{ env.UBUNTU_CODENAME }}
         id: build-and-push
 
       # Temp fix / Disabled on self-hosted runner
       # https://github.com/docker/build-push-action/issues/252
       # https://github.com/moby/buildkit/issues/1896
       - name: Move cache
-        if: ${{ env.UBUNTU_CODENAME != '' && env.UBUNTU_VERSION != '' && env.OCS_VERSION != '' }}
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
@@ -133,7 +114,7 @@ jobs:
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
-        if: ${{ github.event_name != 'pull_request' && env.UBUNTU_CODENAME != '' && env.UBUNTU_VERSION != '' && env.OCS_VERSION != '' }}
+        if: ${{ github.event_name != 'pull_request' }}
         uses: sigstore/cosign-installer@v3
         # with:
         #   cosign-release: 'v2.2.2'
@@ -144,9 +125,9 @@ jobs:
       # transparency data even for private images, pass --force to cosign below.
       # https://github.com/sigstore/cosign
       - name: Sign the published Docker image
-        if: ${{ github.event_name != 'pull_request' && env.UBUNTU_CODENAME != '' && env.UBUNTU_VERSION != '' && env.OCS_VERSION != '' }}
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           COSIGN_EXPERIMENTAL: "true"
         # This step uses the identity token to provision an ephemeral certificate
         # against the sigstore community Fulcio instance.
-        run: echo "${{ steps.meta.outputs.tags }}" | grep -E '^(.+):(.+)-(.+)-(.+)$' | xargs -I {} cosign sign --yes {}@${{ steps.build-and-push.outputs.digest }}
+        run: echo "${{ steps.meta.outputs.tags }}" | grep -E '^(.+):(.+)-(.+)$' | xargs -I {} cosign sign --yes {}@${{ steps.build-and-push.outputs.digest }}
