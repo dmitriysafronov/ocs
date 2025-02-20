@@ -23,27 +23,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
 
-      - name: Read ubuntu codename from file
-        run: |
-          UBUNTU_CODENAME=$(cat .ubuntu-codename)
-          echo "UBUNTU_CODENAME=$UBUNTU_CODENAME" >> $GITHUB_ENV
-
-      - name: Install jq
-        uses: dcarbone/install-jq-action@v3.0.1
-
-      - name: Get latest Ubuntu docker tag
-        uses: ./.github/actions/get-latest-docker-tag
-        id: ubuntu-version
-        with:
-          image: library/ubuntu
-          tag: '^${{ env.UBUNTU_CODENAME }}-(.+)$'
-
-      - name: Save latest Ubuntu docker tag to file in repo
-        run: |
-          UBUNTU_VERSION="$(echo ${{ steps.ubuntu-version.outputs.tag }} | cut -s -d '-' -f 2)"
-          echo "$UBUNTU_VERSION" > .ubuntu-version
-          echo "UBUNTU_VERSION=$UBUNTU_VERSION" >> $GITHUB_ENV
-
       - name: Get latest OCS git tag
         uses: dmitriysafronov/find-latest-tag@v1.0.0
         id: ocs-version
@@ -58,5 +37,5 @@ jobs:
       - name: Commit all changed files back to the repository
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Automated Update. Git: ${{ steps.ocs-version.outputs.tag }}, Docker: ${{ env.UBUNTU_VERSION }} (${{ env.UBUNTU_CODENAME }})"
-          file_pattern: '.ocs-version .ubuntu-version'
+          commit_message: "Automated Update. Git: ${{ steps.ocs-version.outputs.tag }})"
+          file_pattern: '.ocs-version'
