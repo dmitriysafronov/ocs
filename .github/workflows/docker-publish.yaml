@@ -74,6 +74,7 @@ jobs:
             type=raw,enable={{is_default_branch}},value=latest
             type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION_MAJOR }}
             type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION_MAJOR_MINOR }}
+            type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION }}
             type=raw,enable={{is_default_branch}},value=${{ env.OCS_VERSION }},suffix=-{{date 'x'}}
         id: meta
 
