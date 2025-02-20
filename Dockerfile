@@ -1,14 +1,10 @@
-ARG UBUNTU_CODENAME=jammy
-ARG UBUNTU_VERSION=20240111
-
-FROM ubuntu:${UBUNTU_CODENAME}-${UBUNTU_VERSION} AS base
+FROM ubuntu:jammy-20250126 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN set -x \
-		&& apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
 			libcjose0 \
 			libcurl4 \
 			libev4 \
@@ -21,20 +17,20 @@ RUN set -x \
 			libreadline8 \
 			libtalloc2 \
 			libwrap0 \
+		&& apt-get clean \
 		&& rm -rf /var/lib/apt/lists/*
 
 #############################################################
 
 FROM base AS builder-sources
 
-RUN set -x \
-		&& apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
 			curl \
+		&& apt-get clean \
 		&& rm -rf /var/lib/apt/lists/*
 
-ARG OCS_VERSION=1.2.4
-
-RUN set -x \
+RUN --mount=type=bind,source=.ocs-version,target=.ocs-version \
+		export OCS_VERSION=$(cat .ocs-version) \
 		&& cd /tmp \
 		&& curl -SL --connect-timeout 8 --max-time 120 --retry 128 --retry-delay 5 "https://gitlab.com/openconnect/ocserv/-/archive/$OCS_VERSION/ocserv-$OCS_VERSION.tar.gz" -o ocserv.tar.gz \
 		&& mkdir -p /usr/src/ocserv \
@@ -45,8 +41,7 @@ RUN set -x \
 
 FROM base AS builder-dependencies
 
-RUN set -x \
-		&& apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
 			autoconf \
 			automake \
 			build-essential \
@@ -85,16 +80,16 @@ RUN set -x \
 			protobuf-c-compiler \
 			ronn \
 			universal-ctags \
+		&& apt-get clean \
 		&& rm -rf /var/lib/apt/lists/*
-
+	
 #############################################################
 
 FROM builder-dependencies AS builder
 
 COPY --from=builder-sources /usr/src/ocserv/ /usr/src/ocserv/
 
-RUN set -x \
-		&& cd /usr/src/ocserv \
+RUN cd /usr/src/ocserv \
 		&& autoreconf -fvi \
 		&& ./configure --enable-oidc-auth \
 		&& make \
@@ -110,8 +105,7 @@ FROM base AS config
 
 COPY --from=builder /usr/local/share/ocserv/sample.config /tmp/ocserv.conf.template
 
-RUN set -x \
-		&& sed -i 's/\.\/sample\.passwd/\/etc\/ocserv\/ocpasswd/'																			/tmp/ocserv.conf.template \
+RUN sed -i 's/\.\/sample\.passwd/\/etc\/ocserv\/ocpasswd/'																				/tmp/ocserv.conf.template \
 		&& sed -i 's/\(max-same-clients = \)2/\110/' 																									/tmp/ocserv.conf.template \
 		&& sed -i 's/\.\.\/tests/\/etc\/ocserv/'																											/tmp/ocserv.conf.template \
 		&& sed -i 's/#\(compression.*\)/\1/'																													/tmp/ocserv.conf.template \
@@ -138,17 +132,16 @@ RUN set -x \
 
 FROM base AS runtime-dependencies
 
-RUN set -x \
-		&& apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
 			iptables \
 			gettext-base \
 			gnutls-bin \
+		&& apt-get clean \
 		&& rm -rf /var/lib/apt/lists/* \
 		&& rm -rf /usr/local/*
 
 COPY docker-entrypoint.sh /entrypoint.sh
-RUN set -x \
-		&& chmod a+x /entrypoint.sh
+RUN chmod a+x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 
