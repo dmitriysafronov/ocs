@@ -1,4 +1,4 @@
-FROM ubuntu:jammy-20250126 AS base
+FROM ubuntu:jammy-20250404 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
