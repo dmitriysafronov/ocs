@@ -35,7 +35,7 @@ jobs:
           echo "${{ steps.ocs-version.outputs.tag }}" > .ocs-version
 
       - name: Commit all changed files back to the repository
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: "Automated Update. Git: ${{ steps.ocs-version.outputs.tag }})"
           file_pattern: '.ocs-version'
